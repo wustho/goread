@@ -1,5 +1,7 @@
 # goread
 
+![Screenshot](https://github.com/wustho/goread/blob/master/screenshot.png)
+
 Yet another [Goodreads](www.goodreads.com) cli client. This is not an official Goodreads app, but a script intended for my own personal use. This script will help you fetch informations about title, ISBN, publication year, author, rating, number of pages & description of a book and give a list of top 30 author books from resources belong to Goodreads.
 
 This script won't let you manage your Goodreads account like adding/removing book to shelf, follow/unfollow an author or adding/removing reviews.
