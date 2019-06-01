@@ -21,7 +21,9 @@ import os
 import sys
 import requests
 import re
+import textwrap
 import xml.etree.ElementTree as ET
+from html import unescape
 
 try:
     from urllib import quote as UQ
@@ -101,6 +103,7 @@ except ValueError:
     try:
         raw_desc = DATA.find("book/description").text
         desc = re.sub(r"<.*?>", "", raw_desc.replace("<br />", "\n"))
+        desc = unescape(desc)
         print(desc)
 
     except:
