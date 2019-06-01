@@ -17,7 +17,7 @@ EXAMPLES
 \tgoread eduardo sacheri -l
 """
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 __license__ = "GPL"
 __author__ = "Benawi Adha"
 __url__ = "https://github.com/wustho/goread"
@@ -30,6 +30,67 @@ import textwrap
 import xml.etree.ElementTree as ET
 from html import unescape
 from urllib.parse import quote as UQ
+from html.parser import HTMLParser
+
+
+class HTMLtoText(HTMLParser):
+    para = {"p", "div"}
+    inde = {"q", "dt", "dd", "blockquote", "pre"}
+    bull = {"li"}
+    hide = {"script", "style", "head"}
+    # hide = {"script", "style", "head", ", "sub}
+
+    def __init__(self):
+        HTMLParser.__init__(self)
+        self.text = ""
+        self.ishidden = False
+
+    def handle_starttag(self, tag, attrs):
+        if tag in self.hide:
+            self.ishidden = True
+        elif tag in self.inde:
+            self.text += "    "
+        elif tag in self.bull:
+            self.text += "  - "
+        elif tag == "sup":
+            self.text += "^{"
+        elif tag == "sub":
+            self.text += "_{"
+        elif tag == "code" and self.isinde:
+            self.text += "\n"
+
+    def handle_startendtag(self, tag, attrs):
+        if tag == "br":
+            self.text += "\n"
+        elif tag in {"img", "image"}:
+            self.text += " <img: {}>".format(attrs.get("src", ""))
+
+    def handle_endtag(self, tag):
+        if re.match("h[1-6]", tag) is not None:
+            self.text += "\n\n"
+            self.ishead = False
+        elif tag in self.para:
+            self.text += "\n\n"
+        elif tag in self.hide:
+            self.ishidden = False
+        elif tag in self.inde | self.bull:
+            self.text += "\n\n"
+        elif tag in {"sub", "sup"}:
+            self.text[-1] += "}"
+
+    def handle_data(self, raw):
+        if raw and not self.ishidden:
+            self.text += unescape(re.sub(r"\s+", " ", raw))
+
+    def getFormattedText(self, width=0):
+        if width == 0:
+            return self.text
+        else:
+            text = []
+            for i in self.text.splitlines():
+                text.append(textwrap.fill(i, width))
+            return "\n".join(text)
+
 
 def readGoodreadKey():
     devkey_file = os.path.join(os.getenv("HOME"), ".goread_key")
@@ -43,7 +104,6 @@ def readGoodreadKey():
         with open(devkey_file, "w") as f:
             f.write(key)
     return key
-
 
 def fetchXML(api, arg):
     requests.packages.urllib3.disable_warnings()
@@ -83,7 +143,7 @@ def printAuthorWorks(keyword, devkey):
 
     print()
 
-def printBookDesc(keyword, devkey):
+def printBookDesc(keyword, devkey, descwidth=70):
     para = { "key" : devkey }
     grapi_get_rev = "https://www.goodreads.com/book/title.xml"
     para["title"] = keyword
@@ -93,18 +153,20 @@ def printBookDesc(keyword, devkey):
         "\n ISBN\t: ", DATA.find("book/isbn").text,
         "\n Year\t: ", DATA.find("book/publication_year").text,
         "\n Author\t: ", DATA.find("book/authors/author/name").text,
-        "\n Rating\t: ", DATA.find("book/average_rating").text,
+        "\n Rating\t:  *" + DATA.find("book/average_rating").text,
         "({:,} ratings)".format(int(DATA.find("book/work/ratings_count").text)),
         "\n Pages\t: ", DATA.find("book/num_pages").text, "\n")
 
-    try:
-        raw_desc = DATA.find("book/description").text
-        desc = re.sub(r"<.*?>", "", raw_desc.replace("<br />", "\n"))
-        desc = unescape(desc)
-        print(desc)
+    # try:
+    raw_desc = DATA.find("book/description").text
 
-    except:
-        print("(Description not found.)")
+    if raw_desc is None:
+        print("! Description not found.")
+    else:
+        parser = HTMLtoText()
+        parser.feed(raw_desc)
+        parser.close()
+        print(parser.getFormattedText(descwidth))
 
     print("\n<source:www.goodreads.com>\n")
 
@@ -114,11 +176,11 @@ def main():
         print(__doc__)
         sys.exit()
 
-    try:
+    if "-l" in args:
         args.remove("-l")
         authorkeyword = " ".join(args)
         printAuthorWorks(authorkeyword, readGoodreadKey())
-    except ValueError:
+    else:
         bookkeyword = " ".join(args)
         printBookDesc(bookkeyword, readGoodreadKey())
 
