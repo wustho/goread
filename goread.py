@@ -17,7 +17,7 @@ EXAMPLES
 \tgoread eduardo sacheri -l
 """
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 __license__ = "GPL"
 __author__ = "Benawi Adha"
 __url__ = "https://github.com/wustho/goread"
@@ -61,7 +61,7 @@ class HTMLtoText(HTMLParser):
 
     def handle_startendtag(self, tag, attrs):
         if tag == "br":
-            self.text += "\n"
+            self.text += "\n\n"
         elif tag in {"img", "image"}:
             self.text += " <img: {}>".format(attrs.get("src", ""))
 
@@ -168,7 +168,7 @@ def printBookDesc(keyword, devkey, descwidth=70):
         parser.close()
         print(parser.getFormattedText(descwidth))
 
-    print("\n<source:www.goodreads.com>\n")
+    print("\n<source:www.goodreads.com>")
 
 def main():
     args = sys.argv[1:]
